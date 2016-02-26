@@ -1,7 +1,7 @@
 ## Identifying regional relatedness of African-Americans and European-Americans across the United States
 
 ### General info
-`MATHEMATICA` code to
+MATHEMATICA code to
   1. read, efficiently store, analyze, and visualize genomic relatedness of African-Americans and European-Americans across the United States
   2. read, store, model, and visualize relatedness of individuals across the United States based on the data from US Census Bureau (data avilable from [IPUMS](https://usa.ipums.org/usa/))
   3. assess the correlation between genomic data and census data
