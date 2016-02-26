@@ -1,5 +1,4 @@
-# GreatMigration
-identifying regional relatedness of African-Americans and European-Americans across the United States
+## Identifying regional relatedness of African-Americans and European-Americans across the United States
 
 MATHEMATICA code to
   1. read, efficiently store, analyze, and visualize genomic relatedness of African-Americans and European-Americans across the United States
