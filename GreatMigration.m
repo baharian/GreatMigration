@@ -716,6 +716,81 @@ Export["regionIBD_"<>If[isAfrAmIBDi,"AfrAm","EurAm"]<>"-"<>If[isAfrAmIBDj,"AfrAm
 
 
 
+(* BOOTSTRAP TO FIND P-VALUES FOR RELATEDNESS OF AFRICAN-AMERICANS TO SOUTHERN EUROPEAN-AMERICANS *)
+pairs=Table[0,{9},{9}];
+
+isAfrAmIBDi=True
+istart=Table[0,9];
+iend=Table[0,9];
+For[i=2,i<=8,i++,
+	istart[[i]]=First[regionalDataSortedCollapsed[[i,If[TrueQ[isAfrAmIBDi],1,2]]]]/.getIndex;
+	iend[[i]]=Last[regionalDataSortedCollapsed[[i,If[TrueQ[isAfrAmIBDi],1,2]]]]/.getIndex
+]
+
+isAfrAmIBDj=False
+jstart=Table[0,9];
+jend=Table[0,9];
+For[j=2,j<=8,j++,
+	jstart[[j]]=First[regionalDataSortedCollapsed[[j,If[TrueQ[isAfrAmIBDj],1,2]]]]/.getIndex;
+	jend[[j]]=Last[regionalDataSortedCollapsed[[j,If[TrueQ[isAfrAmIBDj],1,2]]]]/.getIndex
+]
+
+For[i=2,i<=8,i++,
+	For[j=2,j<=8,j++,
+		pairs[[i,j]]=(iend[[i]]-istart[[i]]+1) (jend[[j]]-jstart[[j]]+1)
+	]
+]
+
+timeElapsed=TimeUsed[];
+
+iterations=5000; (* this many iterations took about 8 hours on my computer *)
+bootstrapAfrAmEUIBDLength=Table[Table[0,{9},{9}],{iterations}];
+
+binNumber=num;
+l=IBDLengthBins[[binNumber]]+Transpose[IBDLengthBins[[binNumber]]];
+For[itr=1,itr<=iterations,itr++,
+	(* using collapsed regions! *)
+	temp=Flatten[Table[Join[bootstrapSamplingCount[i,True,True],bootstrapSamplingCount[i,False,True]],{i,2,8}]]; (* even though we are not using Regions 1 and 9, since in the collapsed version, nobody lives in those regions, we still end up with the same number of individuals *)
+	bootstrapSampling=Developer`ToPackedArray[(List/@temp).Transpose[List/@temp]];
+
+	(* IBD between bootstrap-sampled individuals across all regions *)
+	bootstrappedIBDLength=bootstrapSampling l;
+
+	For[i=2,i<=8,i++,
+		For[j=2,j<=8,j++,
+			bootstrapAfrAmEUIBDLength[[itr,i,j]]=Total[bootstrappedIBDLength[[istart[[i]];;iend[[i]],jstart[[j]];;jend[[j]]]],2]/pairs[[i,j]]
+		]
+	]
+]
+
+Print["time spent bootstrapping (sec): ",TimeUsed[]-timeElapsed]
+ClearAll[temp,bootstrapSampling,bootstrappedIBDLength]
+ClearMemory[];
+
+(* relatedness of (all African-Americans to southern European-Americans) compared to that of (all African-Americans to northern European-Americans) *)
+diffMean\[LetterSpace]HA=Total[pairs[[All,5;;7]] AfrAmEUIBDLength[[3,All,5;;7]],2]/Total[pairs[[All,5;;7]],2]-Total[pairs[[All,1;;4]] AfrAmEUIBDLength[[3,All,1;;4]],2]/Total[pairs[[All,1;;4]],2]
+diffMean=(Total[pairs[[All,5;;7]] bootstrapAfrAmEUIBDLength[[#,All,5;;7]],2]/Total[pairs[[All,5;;7]],2]-Total[pairs[[All,1;;4]] bootstrapAfrAmEUIBDLength[[#,All,1;;4]],2]/Total[pairs[[All,1;;4]],2])&/@Range[iterations]-diffMean\[LetterSpace]HA;
+Mean[diffMean]
+StandardDeviation[diffMean]
+Quantile[diffMean,{.025,.975}]
+Histogram[diffMean,{0.000075}]
+(* these two are essentially the same and should give the same result (they do!) *)
+NIntegrate[PDF[HistogramDistribution[diffMean],x],{x,diffMean\[LetterSpace]HA,1}]
+Probability[x>diffMean\[LetterSpace]HA,x\[Distributed]HistogramDistribution[diffMean]]
+
+(* relatedness of (northern African-Americans to southern European-Americans) compared to that of (southern African-Americans to southern European-Americans) *)
+diffMean\[LetterSpace]HA=Total[pairs[[1;;4,5;;7]] AfrAmEUIBDLength[[3,1;;4,5;;7]],2]/Total[pairs[[1;;4,5;;7]],2]-Total[pairs[[5;;7,5;;7]] AfrAmEUIBDLength[[3,5;;7,5;;7]],2]/Total[pairs[[5;;7,5;;7]],2]
+diffMean=(Total[pairs[[1;;4,5;;7]] bootstrapAfrAmEUIBDLength[[#,1;;4,5;;7]],2]/Total[pairs[[1;;4,5;;7]],2]-Total[pairs[[5;;7,5;;7]] bootstrapAfrAmEUIBDLength[[#,5;;7,5;;7]],2]/Total[pairs[[5;;7,5;;7]],2])&/@Range[iterations]-diffMean\[LetterSpace]HA;
+Mean[diffMean]
+StandardDeviation[diffMean]
+Quantile[diffMean,{.025,.975}]
+Histogram[diffMean,{0.0001}]
+(* these two are essentially the same and should give the same result (they do!) *)
+NIntegrate[PDF[HistogramDistribution[diffMean],x],{x,diffMean\[LetterSpace]HA,1}]
+Probability[x>diffMean\[LetterSpace]HA,x\[Distributed]HistogramDistribution[diffMean]]
+
+
+
 (* MAPS -- FOR AFRICAN-AMERICANS -- RELATEDNESS BETWEEN REGIONS FOR DIFFERENT BINS -- USING IBD LENGTH *)
 numAfrAmInRegionCollapsed=Length[#]&/@AfrAmsInRegionCollapsed (* number of African-Americans in each region *)
 Total[numAfrAmInRegionCollapsed]
